@@ -1,4 +1,5 @@
 export default {
   home: "/",
-  dashboards: "/dashboards"
+  dashboards: "/dashboards",
+  cardinality: "/cardinality",
 };

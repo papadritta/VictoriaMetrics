@@ -14,6 +14,7 @@ import router from "./router/index";
 import CustomPanel from "./components/CustomPanel/CustomPanel";
 import HomeLayout from "./components/Home/HomeLayout";
 import DashboardsLayout from "./components/PredefinedPanels/DashboardsLayout";
+import CardinalityPanel from "./components/CardinalityPanel/CardinalityPanel";
 
 
 const App: FC = () => {
@@ -32,6 +33,7 @@ const App: FC = () => {
                       <Route path={"/"} element={<HomeLayout/>}>
                         <Route path={router.home} element={<CustomPanel/>}/>
                         <Route path={router.dashboards} element={<DashboardsLayout/>}/>
+                        <Route path={router.cardinality} element={<CardinalityPanel/>} />
                       </Route>
                     </Routes>
                   </HashRouter>

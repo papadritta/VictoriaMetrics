@@ -89,6 +89,11 @@ const Header: FC = () => {
           onChange={(e, val) => setActiveMenu(val)}>
           <Tab label="Custom panel" value={router.home} component={RouterLink} to={`${router.home}${search}`}/>
           <Tab label="Dashboards" value={router.dashboards} component={RouterLink} to={`${router.dashboards}${search}`}/>
+          <Tab
+            label="Cardinality"
+            value={router.cardinality}
+            component={RouterLink}
+            to={`${router.cardinality}${search}`}/>
         </Tabs>
       </Box>
       <Box display="grid" gridTemplateColumns="repeat(3, auto)" gap={1} alignItems="center" ml="auto" mr={0}>
