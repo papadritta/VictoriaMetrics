@@ -5,6 +5,11 @@ TSDBStatusResponse generates response for /api/v1/status/tsdb .
 {% func TSDBStatusResponse(status *storage.TSDBStatus) %}
 {
 	"status":"success",
+	"headsCount": {
+        "numSeries": {%dul status.HeadStats.NumberOfSeries %},
+        "numOfLabelPairs": {%dul status.HeadStats.NumberOfLabelValue %},
+        "numberOfLabelsValuePairs": {%dul status.HeadStats.NumberOfLabelsValuePairs %}
+	},
 	"data":{
 		"seriesCountByMetricName":{%= tsdbStatusEntries(status.SeriesCountByMetricName) %},
 		"labelValueCountByLabelName":{%= tsdbStatusEntries(status.LabelValueCountByLabelName) %},

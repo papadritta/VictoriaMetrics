@@ -4,7 +4,6 @@ import {useAppState} from "../state/common/StateContext";
 import {useCallback, useEffect, useMemo, useState} from "preact/compat";
 import {DisplayType} from "../components/CustomPanel/Configurator/DisplayTypeSwitch";
 import throttle from "lodash.throttle";
-// data-params='{"serverURL": "https://play.victoriametrics.com/select/accounting/1/6a716b0f-38bc-4856-90ce-448fd713e3fe/prometheus/"}'
 import {getCardinalityInfo} from "../api/tsdb";
 import {isValidHttpUrl} from "../utils/url";
 import {CustomStep} from "../state/graph/reducer";
@@ -22,9 +21,10 @@ export const useFetchQuery = ({visible}: FetchQueryParams): {
   isLoading: boolean,
   error?: ErrorTypes | string
 } => {
+  console.log("APP STATE =>", useAppState());
   const {serverUrl, queryControls: {nocache}} = useAppState();
 
-  // const [queryOptions, setQueryOptions] = useState([]);
+  const [queryOptions, setQueryOptions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   // const [graphData, setGraphData] = useState<MetricResult[]>();
   // const [liveData, setLiveData] = useState<InstantMetricResult[]>();
@@ -47,14 +47,12 @@ export const useFetchQuery = ({visible}: FetchQueryParams): {
     if (!server) return;
     const url = getCardinalityInfo(server);
 
-    console.log("url =>", url);
     try {
       const response = await fetch(url);
       const resp = await response.json();
-      console.log("resp =>", resp);
       if (response.ok) {
-        console.log(resp.data);
-        // setQueryOptions(resp.data);
+        const {headsCount, data} = resp;
+        setQueryOptions(resp.data);
       }
     } catch (e) {
       if (e instanceof Error) setError(`${e.name}: ${e.message}`);

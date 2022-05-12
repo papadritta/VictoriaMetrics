@@ -24,7 +24,7 @@ import (
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/uint64set"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/workingsetcache"
 	"github.com/VictoriaMetrics/fastcache"
-	xxhash "github.com/cespare/xxhash/v2"
+	"github.com/cespare/xxhash/v2"
 )
 
 const (
@@ -1366,6 +1366,7 @@ func (is *indexSearch) getTSDBStatusWithFiltersForDate(tfss []*TagFilters, date 
 	thSeriesCountByMetricName := newTopHeap(topN)
 	var tmp, labelName, labelNameValue []byte
 	var labelValueCountByLabelName, seriesCountByLabelValuePair uint64
+	var totalLabelValueCountByLabelName, totalSeriesCountByLabelValuePair, totalSeriesCountByMetricName uint64
 	nameEqualBytes := []byte("__name__=")
 
 	loopsPaceLimiter := 0
@@ -1422,6 +1423,7 @@ func (is *indexSearch) getTSDBStatusWithFiltersForDate(tfss []*TagFilters, date 
 			tmp = append(tmp, "__name__"...)
 		}
 		if !bytes.Equal(tmp, labelName) {
+			totalLabelValueCountByLabelName += labelValueCountByLabelName
 			thLabelValueCountByLabelName.pushIfNonEmpty(labelName, labelValueCountByLabelName)
 			labelValueCountByLabelName = 0
 			labelName = append(labelName[:0], tmp...)
@@ -1432,12 +1434,14 @@ func (is *indexSearch) getTSDBStatusWithFiltersForDate(tfss []*TagFilters, date 
 			return nil, fmt.Errorf("cannot unmarshal tag value from line %q: %w", item, err)
 		}
 		if !bytes.Equal(tmp, labelNameValue) {
+			totalSeriesCountByLabelValuePair += seriesCountByLabelValuePair
 			thSeriesCountByLabelValuePair.pushIfNonEmpty(labelNameValue, seriesCountByLabelValuePair)
 			if bytes.HasPrefix(labelNameValue, nameEqualBytes) {
 				thSeriesCountByMetricName.pushIfNonEmpty(labelNameValue[len(nameEqualBytes):], seriesCountByLabelValuePair)
 			}
 			seriesCountByLabelValuePair = 0
 			labelValueCountByLabelName++
+			totalLabelValueCountByLabelName += labelValueCountByLabelName
 			labelNameValue = append(labelNameValue[:0], tmp...)
 		}
 		if filter == nil {
@@ -1450,6 +1454,7 @@ func (is *indexSearch) getTSDBStatusWithFiltersForDate(tfss []*TagFilters, date 
 		// It is OK if series can be counted multiple times in rare cases -
 		// the returned number is an estimation.
 		seriesCountByLabelValuePair += uint64(matchingSeriesCount)
+		totalSeriesCountByMetricName += uint64(matchingSeriesCount)
 	}
 	if err := ts.Error(); err != nil {
 		return nil, fmt.Errorf("error when counting time series by metric names: %w", err)
@@ -1459,7 +1464,16 @@ func (is *indexSearch) getTSDBStatusWithFiltersForDate(tfss []*TagFilters, date 
 	if bytes.HasPrefix(labelNameValue, nameEqualBytes) {
 		thSeriesCountByMetricName.pushIfNonEmpty(labelNameValue[len(nameEqualBytes):], seriesCountByLabelValuePair)
 	}
+	count, err := is.getSeriesCount()
+	if err != nil {
+		return nil, fmt.Errorf("error when counting total time series: %w", err)
+	}
 	status := &TSDBStatus{
+		HeadStats: &HeadStats{
+			NumberOfSeries:           count,
+			NumberOfLabelValue:       totalLabelValueCountByLabelName,
+			NumberOfLabelsValuePairs: totalSeriesCountByLabelValuePair,
+		},
 		SeriesCountByMetricName:     thSeriesCountByMetricName.getSortedResult(),
 		LabelValueCountByLabelName:  thLabelValueCountByLabelName.getSortedResult(),
 		SeriesCountByLabelValuePair: thSeriesCountByLabelValuePair.getSortedResult(),
@@ -1471,9 +1485,16 @@ func (is *indexSearch) getTSDBStatusWithFiltersForDate(tfss []*TagFilters, date 
 //
 // See https://prometheus.io/docs/prometheus/latest/querying/api/#tsdb-stats
 type TSDBStatus struct {
+	HeadStats                   *HeadStats
 	SeriesCountByMetricName     []TopHeapEntry
 	LabelValueCountByLabelName  []TopHeapEntry
 	SeriesCountByLabelValuePair []TopHeapEntry
+}
+
+type HeadStats struct {
+	NumberOfSeries           uint64
+	NumberOfLabelValue       uint64
+	NumberOfLabelsValuePairs uint64
 }
 
 func (status *TSDBStatus) hasEntries() bool {
