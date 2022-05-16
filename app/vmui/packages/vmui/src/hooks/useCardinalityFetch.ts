@@ -1,16 +1,14 @@
-import {InstantMetricResult, MetricBase, MetricResult} from "../api/types";
 import {ErrorTypes} from "../types";
 import {useAppState} from "../state/common/StateContext";
-import {useCallback, useEffect, useMemo, useState} from "preact/compat";
-import {DisplayType} from "../components/CustomPanel/Configurator/DisplayTypeSwitch";
-import throttle from "lodash.throttle";
+import {useEffect, useState} from "preact/compat";
 import {getCardinalityInfo} from "../api/tsdb";
-import {isValidHttpUrl} from "../utils/url";
-import {CustomStep} from "../state/graph/reducer";
 import {getAppModeEnable, getAppModeParams} from "../utils/app-mode";
+import {TSDBStatus} from "../components/CardinalityPanel/types";
 
 interface FetchQueryParams {
   visible: boolean
+  headsData: any,
+
 }
 
 const appModeEnable = getAppModeEnable();
@@ -20,16 +18,26 @@ export const useFetchQuery = ({visible}: FetchQueryParams): {
   fetchUrl?: string[],
   isLoading: boolean,
   error?: ErrorTypes | string
+  tsdbStatus: TSDBStatus,
 } => {
-  console.log("APP STATE =>", useAppState());
+//  console.log("APP STATE =>", useAppState());
   const {serverUrl, queryControls: {nocache}} = useAppState();
-
   const [queryOptions, setQueryOptions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   // const [graphData, setGraphData] = useState<MetricResult[]>();
   // const [liveData, setLiveData] = useState<InstantMetricResult[]>();
   const [error, setError] = useState<ErrorTypes | string>();
-  const [fetchQueue, setFetchQueue] = useState<AbortController[]>([]);
+  // const [fetchQueue, setFetchQueue] = useState<AbortController[]>([]);
+  const [tsdbStatus, setTSDBStatus] = useState<TSDBStatus>({
+    headsStats: {
+      numOfLabelPairs: 0,
+      numSeries: 0,
+      numberOfLabelsValuePairs: 0,
+    },
+    labelValueCountByLabelName: [], // [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+    seriesCountByLabelValuePair: [], // (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+    seriesCountByMetricName: []
+  })
 
   useEffect(() => {
     if (error) {
@@ -51,7 +59,16 @@ export const useFetchQuery = ({visible}: FetchQueryParams): {
       const response = await fetch(url);
       const resp = await response.json();
       if (response.ok) {
-        const {headsCount, data} = resp;
+        const {headsStats, data} = resp;
+        console.log("headsStats =>", headsStats);
+        console.log("data =>", data);
+
+        setTSDBStatus({
+          headsStats: headsStats,
+          labelValueCountByLabelName: data.labelValueCountByLabelName,
+          seriesCountByLabelValuePair: data.seriesCountByLabelValuePair,
+          seriesCountByMetricName: data.seriesCountByMetricName,
+        })
         setQueryOptions(resp.data);
       }
     } catch (e) {
@@ -86,5 +103,6 @@ export const useFetchQuery = ({visible}: FetchQueryParams): {
   }, [serverUrl]);
 
   // return { fetchUrl, isLoading, graphData, liveData, error, queryOptions: queryOptions };
-  return {isLoading};
+
+  return {isLoading, tsdbStatus};
 };

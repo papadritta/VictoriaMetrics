@@ -25,7 +25,7 @@ var (
 //line app/vmselect/prometheus/tsdb_status_response.qtpl:5
 func StreamTSDBStatusResponse(qw422016 *qt422016.Writer, status *storage.TSDBStatus) {
 //line app/vmselect/prometheus/tsdb_status_response.qtpl:5
-	qw422016.N().S(`{"status":"success","headsCount": {"numSeries":`)
+	qw422016.N().S(`{"status":"success","headsStats": {"numSeries":`)
 //line app/vmselect/prometheus/tsdb_status_response.qtpl:9
 	qw422016.N().DUL(status.HeadStats.NumberOfSeries)
 //line app/vmselect/prometheus/tsdb_status_response.qtpl:9
